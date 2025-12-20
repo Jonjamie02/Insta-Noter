@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<title>Insta-Noter</title>
+</head>
+<body>
+<h1>Insta-Noter</h1>
+
+<div id="login">
+  <input type="text" id="username" placeholder="Username">
+  <div class="password-container">
+    <input type="password" id="password" placeholder="Password">
+    <button type="button" id="togglePassword">Show</button>
+  </div>
+  <button id="loginBtn">Login</button>
+</div>
+
+<div id="notes" style="display:none;">
+  <input type="text" id="newNote" placeholder="New note" minlength="1" maxlength="60">
+  <button id="addNoteBtn">Add Note</button>
+  <ul id="notesList"></ul>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
+
