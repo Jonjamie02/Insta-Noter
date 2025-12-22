@@ -4,19 +4,22 @@ body {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: center; /* center everything horizontally */
+  align-items: center;
+  background: #f5f5f5;
 }
 
 h1 {
   text-align: center;
   margin-bottom: 20px;
+  color: #333;
 }
 
 #login, #notes {
   display: flex;
   flex-direction: column;
-  gap: 10px; /* space between inputs/buttons */
+  gap: 10px;
   width: 300px;
+  padding: 20px;
 }
 
 input[type="text"],
@@ -25,12 +28,30 @@ input[type="password"] {
   padding: 10px;
   box-sizing: border-box;
   font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
 }
 
 button {
   padding: 10px;
+  margin-top: 5px;
   font-size: 16px;
   cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  background: #24292e;
+  color: white;
+  transition: background 0.3s;
+  box-sizing: border-box;
+}
+
+button:hover {
+  background: #1b1f23;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 .password-container {
@@ -40,12 +61,145 @@ button {
 #togglePassword {
   position: absolute;
   right: 10px;
-  top: 50%;
+  top: 35%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
   font-weight: bold;
-  color: #333;
+  color: #24292e;
+  padding: 0;
+  font-size: 12px;
 }
 
+.note-input-container {
+  position: relative;
+}
+
+.note-input-container {
+  position: relative;
+}
+
+.char-counter {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #24292e;
+  pointer-events: none;
+  background: linear-gradient( 
+  to right,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 255, 255, 0.85)
+  );
+  padding: 2px 5px;
+}
+
+.char-counter.warning {
+  color: #ff9800;
+}
+
+.char-counter.danger {
+  color: #f44336;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.button-group button {
+  flex: 1;
+}
+
+.delete-btn {
+  background: #ed4956;
+}
+
+.delete-btn:hover {
+  background: #d62839;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.empty-state i {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+#notesList {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0 0;
+}
+
+#notesList li {
+  padding: 12px;
+  background: #f9f9f9;
+  margin-bottom: 8px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  word-break: break-word;
+}
+
+#notesList li button {
+  padding: 6px 12px;
+  font-size: 14px;
+  background: #ed4956;
+  flex-shrink: 0;
+}
+
+#notesList li button:hover {
+  background: #d62839;
+}
+
+.github-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #24292e;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.github-btn:hover {
+  background: #1b1f23;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #24292e;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  margin: 10px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

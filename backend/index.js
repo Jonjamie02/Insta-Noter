@@ -1,103 +1,194 @@
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
-const InstagramNotes = require('instagram-notes');
-require('dotenv').config();
+const jwt = require('jsonwebtoken');
+const path = require('path');
+const Note = require('instagram-notes');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// Middleware
 app.use(cors());
 app.use(express.json());
-
-const PORT = process.env.PORT || 3000;
-let notesClient = null;
-
-// --- Initialize session if SESSION_ID exists ---
-if (process.env.SESSION_ID) {
-  try {
-    notesClient = new InstagramNotes(process.env.SESSION_ID);
-    console.log('Initialized InstagramNotes with saved SESSION_ID');
-  } catch (err) {
-    console.log('Failed to initialize InstagramNotes with saved SESSION_ID:', err.message);
-  }
-}
-
-// --- Serve frontend ---
 app.use(express.static(path.join(__dirname, 'frontend')));
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
-});
 
-// --- API routes ---
+// Store Instagram clients for logged-in users
+const instagramClients = new Map();
 
-// Login route
+// Middleware to verify JWT
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Routes
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ success: false, message: 'Username and password are required' });
-  }
-
   try {
-    const sessionId = await InstagramNotes.getSessionId(username, password);
-    notesClient = new InstagramNotes(sessionId);
-
-    // For local testing, you can log the sessionId. For Railway, save it in Project -> Variables
-    console.log('Login successful. SESSION_ID:', sessionId);
-
-    res.json({ success: true, message: 'Logged in successfully!', sessionId });
+    // Get Instagram session ID
+    console.log('Attempting to login to Instagram...');
+    const sessionId = await Note.getSessionId(username, password);
+    
+    // Create Instagram client
+    const client = new Note(sessionId);
+    
+    // Generate JWT token for our app
+    const token = jwt.sign({ username, sessionId }, JWT_SECRET, { expiresIn: '24h' });
+    
+    // Store the client
+    instagramClients.set(username, client);
+    
+    console.log('Login successful!');
+    res.json({ success: true, token });
   } catch (err) {
-    console.error('Login failed:', err.message);
-    res.status(400).json({ success: false, message: 'Login failed. Check credentials.', error: err.message });
+    console.error('Login failed:', err);
+    res.status(401).json({ 
+      success: false, 
+      message: 'Invalid Instagram credentials or login failed' 
+    });
   }
 });
 
-// Get notes
-app.get('/notes', async (req, res) => {
-  if (!notesClient) return res.status(400).json({ success: false, message: 'Not logged in' });
-
+// Get all notes from Instagram
+app.get('/notes', authenticateToken, async (req, res) => {
   try {
-    const notes = await notesClient.getNotes();
-    res.json(notes || []);
+    const client = instagramClients.get(req.user.username);
+    
+    if (!client) {
+      return res.status(401).json({ message: 'Session expired, please login again' });
+    }
+
+    const notes = await client.getNotes();
+    res.json(notes);
   } catch (err) {
-    console.error('Error fetching notes:', err.message);
-    res.status(500).json({ success: false, error: err.message });
+    console.error('Failed to get notes:', err);
+    res.status(500).json({ success: false, message: 'Failed to load notes from Instagram' });
   }
 });
 
-// Create note
-app.post('/notes', async (req, res) => {
-  if (!notesClient) return res.status(400).json({ success: false, message: 'Not logged in' });
-
+// Create note on Instagram
+app.post('/notes', authenticateToken, async (req, res) => {
   const { text } = req.body;
-  if (!text || text.length < 1 || text.length > 60) {
-    return res.status(400).json({ success: false, message: 'Note must be between 1-60 characters' });
+
+  if (!text || text.trim().length === 0) {
+    return res.status(400).json({ success: false, message: 'Note text is required' });
+  }
+
+  if (text.length > 60) {
+    return res.status(400).json({ success: false, message: 'Note must be 60 characters or less' });
   }
 
   try {
-    await notesClient.createNote(text);
-    res.json({ success: true, message: 'Note created successfully!' });
+    const client = instagramClients.get(req.user.username);
+    
+    if (!client) {
+      return res.status(401).json({ message: 'Session expired, please login again' });
+    }
+
+    const result = await client.createNote(text.trim());
+    console.log('Note created on Instagram:', result);
+    res.json({ success: true, note: result });
   } catch (err) {
-    console.error('Error creating note:', err.message);
-    res.status(500).json({ success: false, error: err.message });
+    console.error('Failed to create note:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create note on Instagram: ' + err.message 
+    });
   }
 });
 
-// Delete note
-app.delete('/notes/:id', async (req, res) => {
-  if (!notesClient) return res.status(400).json({ success: false, message: 'Not logged in' });
+// Delete specific note by ID on Instagram
+app.delete('/notes/:id', authenticateToken, async (req, res) => {
+  const noteId = req.params.id;
 
-  const { id } = req.params;
   try {
-    await notesClient.deleteNote(id);
-    res.json({ success: true, message: 'Note deleted successfully!' });
+    const client = instagramClients.get(req.user.username);
+    
+    if (!client) {
+      return res.status(401).json({ message: 'Session expired, please login again' });
+    }
+
+    await client.deleteNote(noteId);
+    console.log('Note deleted from Instagram:', noteId);
+    res.json({ success: true, message: 'Note deleted' });
   } catch (err) {
-    console.error('Error deleting note:', err.message);
-    res.status(500).json({ success: false, error: err.message });
+    console.error('Failed to delete note:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to delete note from Instagram: ' + err.message 
+    });
   }
 });
 
-// --- Start server ---
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+// Delete user's own note on Instagram
+app.delete('/notes/delete-my-note', authenticateToken, async (req, res) => {
+  try {
+    const client = instagramClients.get(req.user.username);
+    
+    if (!client) {
+      return res.status(401).json({ message: 'Session expired, please login again' });
+    }
+
+    // Get all notes to find the user's note
+    const notes = await client.getNotes();
+    
+    // Find the user's own note (you'll need to identify which one is yours)
+    // The instagram-notes API returns notes with user info
+    const myNote = notes.find(note => note.user?.username === req.user.username);
+    
+    if (!myNote) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'You have no note to delete on Instagram' 
+      });
+    }
+
+    await client.deleteNote(myNote.id);
+    console.log('Your note deleted from Instagram');
+    res.json({ success: true, message: 'Your note has been deleted from Instagram' });
+  } catch (err) {
+    console.error('Failed to delete your note:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to delete your note from Instagram: ' + err.message 
+    });
+  }
 });
 
+// Update last seen time
+app.post('/notes/last-seen', authenticateToken, async (req, res) => {
+  try {
+    const client = instagramClients.get(req.user.username);
+    
+    if (!client) {
+      return res.status(401).json({ message: 'Session expired, please login again' });
+    }
+
+    await client.lastSeenUpdateNote();
+    res.json({ success: true, message: 'Last seen updated' });
+  } catch (err) {
+    console.error('Failed to update last seen:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update last seen: ' + err.message 
+    });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});

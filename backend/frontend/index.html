@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="style.css">
 <title>Insta-Noter</title>
+<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 <h1>Insta-Noter</h1>
@@ -16,15 +18,29 @@
     <button type="button" id="togglePassword">Show</button>
   </div>
   <button id="loginBtn">Login</button>
+  <div id="spinner" class="spinner" style="display:none;"></div>
 </div>
 
 <div id="notes" style="display:none;">
-  <input type="text" id="newNote" placeholder="New note" minlength="1" maxlength="60">
-  <button id="addNoteBtn">Add Note</button>
+  <div class="note-input-container">
+    <input type="text" id="newNote" placeholder="New note (max 60 chars)" minlength="1" maxlength="60">
+    <span id="charCounter" class="char-counter">0/60</span>
+  </div>
+  <div class="button-group">
+    <button id="addNoteBtn">Add Note</button>
+  </div>
+  <div id="noteSpinner" class="spinner" style="display:none;"></div>
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <i class="fas fa-sticky-note"></i>
+    <p>No notes yet. Create your first note!</p>
+  </div>
   <ul id="notesList"></ul>
 </div>
+
+<a href="https://github.com/ashyrv0/Insta-Noter" target="_blank" rel="noopener" class="github-btn">
+  <i class="fa-brands fa-github"></i>
+</a>
 
 <script src="script.js"></script>
 </body>
 </html>
-
